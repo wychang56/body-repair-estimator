@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>外板鈑金修正指數計算器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink-navy:#0B2440;
+    --ink-navy-deep:#081A30;
+    --blueprint-line:#24476B;
+    --blueprint-line-soft:rgba(124,147,168,0.18);
+    --paper:#EEF3F7;
+    --paper-dim:#DCE6EE;
+    --steel:#8CA3B8;
+    --steel-dark:#5A7488;
+    --safety-orange:#E8541E;
+    --safety-orange-dim:#B8431A;
+    --grade-a:#3FA796;
+    --grade-b:#E8A93E;
+    --grade-c:#D64545;
+    --font-display:'Noto Sans TC', sans-serif;
+    --font-mono:'JetBrains Mono', monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+
+  body{
+    font-family:var(--font-display);
+    background:
+      linear-gradient(var(--blueprint-line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--blueprint-line-soft) 1px, transparent 1px),
+      var(--ink-navy);
+    background-size:28px 28px, 28px 28px, cover;
+    color:var(--paper);
+    min-height:100vh;
+    padding:0 0 80px;
+  }
+
+  a{color:inherit;}
+
+  /* ---------- Header ---------- */
+  header{
+    padding:56px 24px 40px;
+    max-width:1080px;
+    margin:0 auto;
+    border-bottom:1px solid var(--blueprint-line);
+    position:relative;
+  }
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:var(--safety-orange);
+    margin:0 0 14px;
+  }
+  h1{
+    font-size:clamp(28px, 4.4vw, 44px);
+    font-weight:900;
+    margin:0 0 12px;
+    letter-spacing:0.01em;
+    line-height:1.25;
+  }
+  header p.sub{
+    color:var(--steel);
+    font-size:15px;
+    max-width:640px;
+    line-height:1.7;
+    margin:0;
+  }
+  .corner-tag{
+    position:absolute;
+    right:24px;
+    top:56px;
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--steel-dark);
+    text-align:right;
+    line-height:1.6;
+    display:none;
+  }
+  @media (min-width:760px){ .corner-tag{display:block;} }
+
+  /* ---------- Layout ---------- */
+  main{
+    max-width:1080px;
+    margin:0 auto;
+    padding:40px 24px 0;
+    display:grid;
+    grid-template-columns:1fr;
+    gap:28px;
+  }
+
+  .rate-bar{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:16px;
+    background:rgba(238,243,247,0.04);
+    border:1px solid var(--blueprint-line);
+    border-radius:10px;
+    padding:16px 20px;
+  }
+  .rate-bar label{
+    font-size:13px;
+    color:var(--steel);
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .rate-bar input[type=number]{
+    width:120px;
+  }
+  .rate-bar .hint{
+    font-size:12px;
+    color:var(--steel-dark);
+    margin-left:auto;
+  }
+
+  input[type=text], input[type=number], select{
+    background:var(--ink-navy-deep);
+    border:1px solid var(--blueprint-line);
+    color:var(--paper);
+    font-family:var(--font-mono);
+    font-size:14px;
+    padding:9px 10px;
+    border-radius:6px;
+    outline:none;
+    transition:border-color .15s ease;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus{
+    border-color:var(--safety-orange);
+  }
+  select{font-family:var(--font-display);}
+
+  button{
+    font-family:var(--font-display);
+    cursor:pointer;
+    border:none;
+    border-radius:7px;
+    font-weight:700;
+    transition:transform .1s ease, opacity .15s ease;
+  }
+  button:active{transform:scale(0.97);}
+
+  .btn-primary{
+    background:var(--safety-orange);
+    color:#fff;
+    padding:11px 20px;
+    font-size:14px;
+  }
+  .btn-primary:hover{background:var(--safety-orange-dim);}
+
+  .btn-ghost{
+    background:transparent;
+    border:1px dashed var(--steel-dark);
+    color:var(--steel);
+    padding:9px 16px;
+    font-size:13px;
+  }
+  .btn-ghost:hover{border-color:var(--safety-orange); color:var(--paper);}
+
+  .btn-icon{
+    background:transparent;
+    color:var(--steel-dark);
+    border:1px solid transparent;
+    width:30px;height:30px;
+    border-radius:6px;
+    font-size:15px;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+  .btn-icon:hover{color:var(--grade-c); border-color:var(--grade-c);}
+
+  /* ---------- Panels (车体部位) ---------- */
+  #panels{display:flex;flex-direction:column;gap:20px;}
+
+  .panel-card{
+    background:var(--paper);
+    color:var(--ink-navy);
+    border-radius:14px;
+    overflow:hidden;
+    box-shadow:0 12px 30px rgba(0,0,0,0.28);
+    transition:box-shadow .3s ease;
+  }
+  .panel-card.flash-highlight{
+    box-shadow:0 0 0 3px var(--safety-orange), 0 12px 30px rgba(0,0,0,0.28);
+  }
+  .panel-head{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:16px 20px;
+    background:var(--paper-dim);
+    border-bottom:1px solid rgba(11,36,64,0.1);
+  }
+  .panel-head .idx-num{
+    font-family:var(--font-mono);
+    font-weight:700;
+    color:var(--steel-dark);
+    font-size:13px;
+  }
+  .panel-head input[type=text]{
+    flex:1;
+    background:#fff;
+    color:var(--ink-navy);
+    border:1px solid rgba(11,36,64,0.15);
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:15px;
+  }
+
+  .damages{padding:6px 20px 4px;}
+  .damage-row{
+    display:grid;
+    grid-template-columns:120px 1fr auto;
+    gap:14px;
+    align-items:start;
+    padding:16px 0;
+    border-bottom:1px solid rgba(11,36,64,0.08);
+  }
+  .damage-row:last-child{border-bottom:none;}
+
+  .dim-fields{display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
+  .dim-fields .fld{display:flex; flex-direction:column; gap:3px;}
+  .dim-fields label{font-size:10px; color:var(--steel-dark); font-family:var(--font-mono);}
+  .dim-fields input{width:76px; background:#fff; color:var(--ink-navy); border-color:rgba(11,36,64,0.2);}
+
+  .damage-row select{background:#fff; color:var(--ink-navy); border-color:rgba(11,36,64,0.2); font-size:13px; width:100%;}
+
+  .questions{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-top:12px;
+  }
+  .q{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    font-size:12.5px;
+    line-height:1.5;
+    color:#33465A;
+  }
+  .q .qtext{flex:1;}
+  .q .qtext .foot{color:var(--steel-dark); font-size:11px;}
+  .toggle{
+    display:flex;
+    border:1px solid rgba(11,36,64,0.2);
+    border-radius:6px;
+    overflow:hidden;
+    flex-shrink:0;
+  }
+  .toggle button{
+    font-family:var(--font-mono);
+    font-size:11px;
+    padding:5px 10px;
+    background:#fff;
+    color:var(--steel-dark);
+    border-radius:0;
+    font-weight:700;
+  }
+  .toggle button.on-yes.active{background:var(--grade-a); color:#fff;}
+  .toggle button.on-no.active{background:var(--grade-c); color:#fff;}
+
+  .area-badge{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--ink-navy);
+    background:#fff;
+    border:1px solid rgba(11,36,64,0.15);
+    border-radius:6px;
+    padding:4px 8px;
+    white-space:nowrap;
+    margin-top:2px;
+  }
+
+  .damage-add{
+    padding:10px 0 16px;
+  }
+
+  /* Grid swatch mimicking the transparent 1dm^2 measuring sheet */
+  .grid-swatch{
+    display:inline-grid;
+    grid-template-columns:repeat(var(--gc,4), 9px);
+    grid-auto-rows:9px;
+    gap:1px;
+    vertical-align:middle;
+    margin-right:6px;
+  }
+  .grid-swatch div{background:rgba(232,84,30,0.55); border:1px solid rgba(11,36,64,0.25);}
+
+  /* ---------- Panel result strip ---------- */
+  .result-strip{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:22px;
+    background:var(--ink-navy);
+    color:var(--paper);
+    padding:16px 20px;
+  }
+  .result-strip .metric{display:flex; flex-direction:column; gap:2px;}
+  .result-strip .metric .lab{font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--steel); font-family:var(--font-mono);}
+  .result-strip .metric .val{font-family:var(--font-mono); font-size:18px; font-weight:700;}
+  .grade-pill{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:26px;height:26px; border-radius:50%;
+    font-family:var(--font-mono); font-weight:700; font-size:13px; color:#fff;
+  }
+  .grade-A{background:var(--grade-a);}
+  .grade-B{background:var(--grade-b); color:#3a2c00;}
+  .grade-C{background:var(--grade-c);}
+
+  .result-strip .cost{margin-left:auto; text-align:right;}
+  .result-strip .cost .val{color:var(--safety-orange); font-size:22px;}
+
+  .panel-remove{margin-left:auto;}
+
+  /* ---------- Add panel / totals ---------- */
+  .add-panel-row{display:flex; justify-content:center; padding:6px 0 4px;}
+
+  /* ---------- Car diagram part picker ---------- */
+  .picker{
+    border:1px solid var(--blueprint-line);
+    border-radius:14px;
+    background:rgba(238,243,247,0.03);
+    padding:22px 24px 26px;
+  }
+  .picker-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-bottom:16px;
+  }
+  .picker-title{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--steel);
+  }
+  .lr-toggle{
+    display:inline-flex;
+    border:1px solid var(--steel-dark);
+    border-radius:7px;
+    overflow:hidden;
+    font-family:var(--font-mono);
+    font-size:12px;
+  }
+  .lr-toggle button{
+    background:var(--ink-navy-deep);
+    color:var(--steel);
+    padding:7px 14px;
+    border-radius:0;
+  }
+  .lr-toggle button.active{background:var(--safety-orange); color:#fff;}
+
+  .diagrams{
+    display:grid;
+    grid-template-columns:1.7fr 1fr 1fr;
+    gap:18px;
+    align-items:start;
+  }
+  @media (max-width:760px){ .diagrams{grid-template-columns:1fr;} }
+
+  .diagram-box{
+    background:#fff;
+    border:1px solid var(--blueprint-line);
+    border-radius:10px;
+    padding:0;
+    overflow:hidden;
+  }
+  .diagram-box .dcap{
+    font-family:var(--font-mono);
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:0.04em;
+    color:var(--paper);
+    text-align:center;
+    margin:0;
+    padding:8px 0;
+    background:var(--ink-navy-deep);
+  }
+  .diagram-frame{
+    position:relative;
+    width:100%;
+    line-height:0;
+  }
+  .diagram-frame img{width:100%; display:block;}
+
+  .hotspot{
+    position:absolute;
+    background:rgba(232,84,30,0);
+    border:1px solid rgba(232,84,30,0);
+    cursor:pointer;
+    transition:background .12s ease, border-color .12s ease;
+  }
+  .hotspot:hover{background:rgba(232,84,30,0.30); border-color:rgba(232,84,30,0.9);}
+  .hotspot.used{background:rgba(63,167,150,0.32); border-color:rgba(63,167,150,0.9);}
+
+  .lr-badge{
+    position:absolute;
+    top:8px; left:8px;
+    z-index:5;
+    background:var(--safety-orange);
+    color:#fff;
+    font-family:var(--font-mono);
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:0.05em;
+    padding:4px 10px;
+    border-radius:6px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.35);
+    pointer-events:none;
+  }
+
+  .picker-hint{
+    margin-top:14px;
+    font-size:12px;
+    color:var(--steel-dark);
+    line-height:1.7;
+  }
+  .picker-divider{
+    display:flex; align-items:center; gap:12px;
+    margin:20px 0 4px;
+    color:var(--steel-dark);
+    font-family:var(--font-mono);
+    font-size:11px;
+  }
+  .picker-divider::before, .picker-divider::after{
+    content:""; flex:1; height:1px; background:var(--blueprint-line);
+  }
+
+
+  .totals{
+    background:linear-gradient(135deg, rgba(232,84,30,0.14), rgba(232,84,30,0.02));
+    border:1px solid var(--safety-orange-dim);
+    border-radius:14px;
+    padding:26px 28px;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:20px;
+  }
+  .totals .t-label{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--steel);
+  }
+  .totals .t-value{
+    font-family:var(--font-mono);
+    font-size:clamp(30px,5vw,42px);
+    font-weight:700;
+    color:#fff;
+  }
+  .totals .t-sep{color:var(--steel-dark);}
+  .totals .t-actions{margin-left:auto; display:flex; gap:10px;}
+
+  /* ---------- Reference panel ---------- */
+  details.reference{
+    border:1px solid var(--blueprint-line);
+    border-radius:10px;
+    padding:4px 20px 2px;
+    background:rgba(238,243,247,0.03);
+  }
+  details.reference summary{
+    cursor:pointer;
+    padding:14px 0;
+    font-weight:700;
+    font-size:14px;
+    color:var(--steel);
+    list-style:none;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  details.reference summary::-webkit-details-marker{display:none;}
+  details.reference summary::before{content:"§"; color:var(--safety-orange); font-family:var(--font-mono);}
+  .ref-body{padding:0 0 20px; font-size:13px; line-height:1.9; color:var(--steel);}
+  .ref-body table{border-collapse:collapse; width:100%; margin-top:12px; font-family:var(--font-mono); font-size:12px;}
+  .ref-body th, .ref-body td{border:1px solid var(--blueprint-line); padding:6px 10px; text-align:center;}
+  .ref-body th{background:rgba(232,84,30,0.12); color:var(--paper);}
+  .ref-grade-A{color:var(--grade-a); font-weight:700;}
+  .ref-grade-B{color:var(--grade-b); font-weight:700;}
+  .ref-grade-C{color:var(--grade-c); font-weight:700;}
+
+  footer{
+    max-width:1080px;
+    margin:50px auto 0;
+    padding:20px 24px 0;
+    color:var(--steel-dark);
+    font-size:11px;
+    font-family:var(--font-mono);
+    border-top:1px solid var(--blueprint-line);
+  }
+
+  @media print{
+    body{background:#fff; color:#000;}
+    header .corner-tag, .rate-bar, .damage-add, .panel-remove, .add-panel-row, .totals .t-actions, details.reference, .toggle, .picker{display:none !important;}
+    .panel-card{box-shadow:none; border:1px solid #999; break-inside:avoid;}
+    .result-strip{background:#fff; color:#000; border-top:1px solid #999;}
+    .result-strip .val, .totals .t-value{color:#000 !important;}
+  }
+
+  @media (max-width:640px){
+    .damage-row{grid-template-columns:1fr;}
+    .result-strip .cost{margin-left:0; text-align:left;}
+    .totals .t-actions{margin-left:0; width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">Oddic 外板板金修正指數表 · 網頁版</p>
+  <h1>外板鈑金修正<br>指數計算器</h1>
+  <p class="sub">依受損面積與難易度三問，自動查表算出各部位的鈑金修正指數，並換算成估價金額。</p>
+  <div class="corner-tag">SCALE&nbsp;1&nbsp;:&nbsp;1&nbsp;GRID<br>1 UNIT = 1 dm²</div>
+</header>
+
+<main>
+
+  <div class="rate-bar">
+    <label>每單位指數費率（元）
+      <input type="number" id="rateInput" value="800" min="0" step="10">
+    </label>
+    <span class="hint">部位金額 = 指數 × 費率，可隨時調整</span>
+  </div>
+
+  <div class="picker">
+    <div class="picker-head">
+      <span class="picker-title">點選受損部位</span>
+      <div class="lr-toggle">
+        <button id="lrL" data-lr="L">車身左側 (L)</button>
+        <button id="lrR" data-lr="R" class="active">車身右側 (R)</button>
+      </div>
+    </div>
+
+    <div class="diagrams">
+
+      <div class="diagram-box">
+        <div class="diagram-frame">
+          <img src="assets/side.png" alt="車身側視圖">
+          <div class="lr-badge" id="lrBadge">目前標記：右側 R</div>
+          <div class="hotspot" data-base="前葉子板" data-lr="toggle" style="left:0%;   top:37.8%; width:26.7%; height:40.6%;"></div>
+          <div class="hotspot" data-base="A柱"     data-lr=""       style="left:34.4%; top:20.7%; width:14.4%; height:17.1%;"></div>
+          <div class="hotspot" data-base="前車門"   data-lr="toggle" style="left:26.7%; top:37.8%; width:24.4%; height:33.6%;"></div>
+          <div class="hotspot" data-base="B柱"     data-lr=""       style="left:51.1%; top:20.7%; width:13.3%; height:17.1%;"></div>
+          <div class="hotspot" data-base="後車門"   data-lr="toggle" style="left:51.1%; top:37.8%; width:24.4%; height:33.6%;"></div>
+          <div class="hotspot" data-base="C柱"     data-lr=""       style="left:64.4%; top:20.7%; width:13.3%; height:17.1%;"></div>
+          <div class="hotspot" data-base="後葉子板" data-lr="toggle" style="left:75.6%; top:37.8%; width:24.4%; height:40.6%;"></div>
+          <div class="hotspot" data-base="側裙（側踏板）" data-lr="toggle" style="left:26.7%; top:71.4%; width:48.9%; height:6.9%;"></div>
+        </div>
+        <div class="dcap">側視圖 SIDE VIEW</div>
+      </div>
+
+      <div class="diagram-box">
+        <div class="diagram-frame">
+          <img src="assets/front.png" alt="車身正視圖">
+          <div class="hotspot" data-base="前擋板" data-lr="R" style="left:0%;    top:0%;    width:12%;   height:100%;"></div>
+          <div class="hotspot" data-base="前擋板" data-lr="L" style="left:88%;   top:0%;    width:12%;   height:100%;"></div>
+          <div class="hotspot" data-base="引擎蓋" data-lr=""  style="left:6%;    top:0%;    width:88%;   height:22%;"></div>
+          <div class="hotspot" data-base="水箱護罩" data-lr="" style="left:22%;  top:21.7%; width:32.3%; height:27.6%;"></div>
+          <div class="hotspot" data-base="前大燈" data-lr="R" style="left:5.9%;  top:26.3%; width:16.1%; height:18.4%;"></div>
+          <div class="hotspot" data-base="前大燈" data-lr="L" style="left:54.3%; top:26.3%; width:16.1%; height:18.4%;"></div>
+          <div class="hotspot" data-base="前保險桿" data-lr="" style="left:0%;  top:63.1%; width:100%;  height:36.9%;"></div>
+        </div>
+        <div class="dcap">正視圖 FRONT VIEW</div>
+      </div>
+
+      <div class="diagram-box">
+        <div class="diagram-frame">
+          <img src="assets/rear.png" alt="車身後視圖">
+          <div class="hotspot" data-base="行李箱蓋" data-lr="" style="left:12.2%; top:0%;    width:83.8%; height:22.9%;"></div>
+          <div class="hotspot" data-base="後尾燈" data-lr="R"  style="left:0%;    top:22.9%; width:17%;   height:37.2%;"></div>
+          <div class="hotspot" data-base="後尾燈" data-lr="L"  style="left:82.4%; top:22.9%; width:17.6%; height:37.2%;"></div>
+          <div class="hotspot" data-base="後保險桿" data-lr="" style="left:0%;  top:49.5%; width:100%;  height:50.5%;"></div>
+        </div>
+        <div class="dcap">後視圖 REAR VIEW</div>
+      </div>
+
+      <div class="diagram-box">
+        <div class="diagram-frame">
+          <img src="assets/top.png" alt="車身俯視圖">
+          <div class="hotspot" data-base="前擋板"   data-lr="" style="left:0%;    top:0%; width:27.9%; height:100%;"></div>
+          <div class="hotspot" data-base="車頂總成" data-lr="" style="left:27.9%; top:0%; width:32.3%; height:100%;"></div>
+          <div class="hotspot" data-base="行李箱蓋" data-lr="" style="left:60.1%; top:0%; width:39.9%; height:100%;"></div>
+        </div>
+        <div class="dcap">俯視圖 TOP VIEW</div>
+      </div>
+
+    </div>
+
+    <p class="picker-hint">點一下部位即可自動新增到下方清單並帶入名稱；同一部位重複點擊會直接定位到已建立的卡片，不會重複新增。標了左／右的部位由上方切換鈕決定。圖片直接取自你提供的原圖，點擊區域是我依標號位置估算疊上去的，若跟實際板件邊界有落差，跟我說要往哪個方向調整。</p>
+
+    <div class="picker-divider">或手動輸入</div>
+  </div>
+
+  <div id="panels"></div>
+
+  <div class="add-panel-row">
+    <button class="btn-primary" id="addPanelBtn">＋ 新增車體部位（自訂名稱）</button>
+  </div>
+
+  <div class="totals">
+    <div>
+      <div class="t-label">估價總計</div>
+      <div class="t-value">NT$ <span id="grandTotal">0</span></div>
+    </div>
+    <span class="t-sep">／</span>
+    <div>
+      <div class="t-label">指數合計</div>
+      <div class="t-value" style="font-size:22px;"><span id="grandIndex">0.00</span></div>
+    </div>
+    <div class="t-actions">
+      <button class="btn-ghost" id="printBtn">列印估價單</button>
+    </div>
+  </div>
+
+  <details class="reference">
+    <summary>難易度判定與指數對照表（原始依據）</summary>
+    <div class="ref-body">
+      <p>每一處損傷需回答三個難易度問題。三題皆為「是」→ <span class="ref-grade-A">A 級</span>；三題有是有否 → <span class="ref-grade-B">B 級</span>；三題皆為「否」→ <span class="ref-grade-C">C 級</span>。同一部位有多處損傷時，面積取合計，難易度取最高等級（C＞B＞A）。</p>
+      <table id="refTable"></table>
+      <p style="margin-top:12px;">面積不滿 1 dm² 以 1 dm² 計算；小數點以下四捨五入。超過 40 dm² 已超出原表範圍，請人工評估。</p>
+    </div>
+  </details>
+
+</main>
+
+<footer>
+  DATA SOURCE — Oddic 汽車板金工時估價電腦化系統／外板板金修正指數表　·　本工具僅重現該指數表之計算邏輯，供估價參考，不涉零件與骨體作業工時
+</footer>
+
+<script>
+(function(){
+
+  // ---- Index lookup table (rows are the printed area bucket labels) ----
+  var TABLE = [
+    {area:1,  label:"1",     A:0.60, B:0.80, C:0.90},
+    {area:2,  label:"2",     A:0.80, B:1.00, C:1.40},
+    {area:3,  label:"3",     A:0.90, B:1.30, C:1.70},
+    {area:4,  label:"4",     A:1.00, B:1.40, C:1.90},
+    {min:5,  max:6,  label:"5~6",   A:1.10, B:1.50, C:2.10},
+    {min:7,  max:8,  label:"7~8",   A:1.20, B:1.70, C:2.30},
+    {min:9,  max:10, label:"9~10",  A:1.30, B:1.90, C:2.50},
+    {min:11, max:14, label:"11~14", A:1.40, B:2.10, C:2.80},
+    {min:15, max:18, label:"15~18", A:1.50, B:2.30, C:3.00},
+    {min:19, max:22, label:"19~22", A:1.60, B:2.50, C:3.30},
+    {min:23, max:26, label:"23~26", A:1.70, B:2.60, C:3.50},
+    {min:27, max:30, label:"27~30", A:1.80, B:2.80, C:3.70},
+    {min:31, max:40, label:"31~40", A:2.00, B:3.10, C:4.10}
+  ];
+
+  function lookupRow(areaInt){
+    for (var i=0;i<TABLE.length;i++){
+      var r = TABLE[i];
+      if (r.area !== undefined && r.area === areaInt) return r;
+      if (r.min !== undefined && areaInt >= r.min && areaInt <= r.max) return r;
+    }
+    return null; // out of range (>40)
+  }
+
+  var SHAPES = {
+    rect:   {label:"矩形／正方形", fields:[["a","邊長 a"],["b","邊長 b"]], calc:function(v){return v.a*v.b;}},
+    circle: {label:"圓形／橢圓形", fields:[["a","長軸 a"],["b","短軸 b"]], calc:function(v){return 0.8*v.a*v.b;}},
+    tri:    {label:"三角形",        fields:[["a","底邊 a"],["b","高度 b"]], calc:function(v){return 0.5*v.a*v.b;}},
+    poly:   {label:"多邊形（雙三角）", fields:[["a1","底邊 a1"],["b1","高度 b1"],["a2","底邊 a2"],["b2","高度 b2"]], calc:function(v){return 0.5*(v.a1*v.b1 + v.a2*v.b2);}},
+    line:   {label:"線狀形",        fields:[["a","長度 a"]], calc:function(v){return v.a*10;}}
+  };
+
+  var QUESTIONS = [
+    {key:"q1", text:"是否為輕度損傷？", foot:"每處損傷 3dm² 以下，無明顯折彎、破損或延展。"},
+    {key:"q2", text:"是否沒有損及成型線或鈑件邊緣部位？", foot:""},
+    {key:"q3", text:"是否可以鐵鎚、手頂鐵塊、或撬棒等工具，在鈑件裏面作業？", foot:"含拆卸附屬品後可從內裏作業之情形。"}
+  ];
+
+  var panelSeq = 0, damageSeq = 0;
+  var panels = []; // {id, name, damages:[{id, shape, dims:{}, q1,q2,q3}]}
+
+  var panelsEl = document.getElementById("panels");
+  var rateInput = document.getElementById("rateInput");
+
+  function newDamage(){
+    damageSeq++;
+    return {id:"d"+damageSeq, shape:"rect", dims:{a:10,b:10}, q1:null, q2:null, q3:null};
+  }
+
+  function addPanel(){
+    panelSeq++;
+    panels.push({id:"p"+panelSeq, name:"部位 "+panelSeq, damages:[newDamage()]});
+    render();
+    updateHotspotStates();
+  }
+
+  function removePanel(pid){
+    panels = panels.filter(function(p){return p.id!==pid;});
+    render();
+    updateHotspotStates();
+  }
+
+  function computeDamageArea(d){
+    var shape = SHAPES[d.shape];
+    var v = d.dims;
+    var ok = shape.fields.every(function(f){ return v[f[0]] !== undefined && v[f[0]] !== "" && !isNaN(v[f[0]]); });
+    if (!ok) return 0;
+    var cm2 = shape.calc(v);
+    return cm2/100;
+  }
+
+  function damageClass(d){
+    if (d.q1===null || d.q2===null || d.q3===null) return null;
+    var yes = (d.q1?1:0)+(d.q2?1:0)+(d.q3?1:0);
+    if (yes===3) return "A";
+    if (yes===0) return "C";
+    return "B";
+  }
+
+  var GRADE_RANK = {A:0,B:1,C:2};
+
+  function computePanel(panel){
+    var totalArea = 0;
+    var worst = null;
+    var anyIncomplete = false;
+    panel.damages.forEach(function(d){
+      totalArea += computeDamageArea(d);
+      var c = damageClass(d);
+      if (c===null){ anyIncomplete = true; }
+      else if (worst===null || GRADE_RANK[c] > GRADE_RANK[worst]) worst = c;
+    });
+    var roundedArea = Math.round(totalArea);
+    if (totalArea>0 && roundedArea<1) roundedArea = 1;
+    var row = roundedArea>0 ? lookupRow(roundedArea) : null;
+    var index = (row && worst) ? row[worst] : null;
+    var rate = parseFloat(rateInput.value) || 0;
+    var cost = index!==null ? index*rate : null;
+    return {totalArea:totalArea, roundedArea:roundedArea, grade:worst, index:index, cost:cost, incomplete:anyIncomplete, outOfRange: roundedArea>40};
+  }
+
+  function fmt(n, dp){ return isFinite(n) ? n.toFixed(dp===undefined?2:dp) : "—"; }
+  function fmtMoney(n){ return Math.round(n).toLocaleString("zh-Hant-TW"); }
+
+  function gridSwatch(dm2){
+    var n = Math.max(1, Math.min(12, Math.round(dm2)));
+    var cols = Math.min(4, n);
+    var html = '<span class="grid-swatch" style="--gc:'+cols+'">';
+    for (var i=0;i<n;i++) html += "<div></div>";
+    html += "</span>";
+    return html;
+  }
+
+  function buildStripHTML(result){
+    var gradeHtml = result.grade ? '<span class="grade-pill grade-'+result.grade+'">'+result.grade+'</span>' : '<span class="grade-pill" style="background:#5A7488;">?</span>';
+    return '<div class="metric"><span class="lab">合計面積</span><span class="val">'+fmt(result.totalArea,1)+' dm²</span></div>' +
+      '<div class="metric"><span class="lab">查表面積</span><span class="val">'+(result.roundedArea||0)+'</span></div>' +
+      '<div class="metric"><span class="lab">難易度</span><span class="val">'+gradeHtml+'</span></div>' +
+      '<div class="metric"><span class="lab">修正指數</span><span class="val">'+(result.index!==null?fmt(result.index):"—")+'</span></div>' +
+      '<div class="cost"><span class="lab">部位金額</span><span class="val">NT$ '+(result.cost!==null?fmtMoney(result.cost):"—")+'</span></div>';
+  }
+
+  function buildWarnHTML(result){
+    if (result.incomplete){
+      return '<div style="padding:8px 20px; font-size:11.5px; color:#3a2c00; background:#F5D98A;">⚠ 尚有損傷點未完成三題難易度判定，指數暫不計算。</div>';
+    }
+    if (result.outOfRange){
+      return '<div style="padding:8px 20px; font-size:11.5px; color:#fff; background:var(--grade-c);">⚠ 合計面積 '+result.roundedArea+' dm² 超出原表範圍（最大 40 dm²），請人工評估。</div>';
+    }
+    return "";
+  }
+
+  function recalc(){
+    var grandTotal = 0, grandIndex = 0;
+    panels.forEach(function(panel){
+      var result = computePanel(panel);
+      grandTotal += result.cost || 0;
+      grandIndex += result.index || 0;
+      var card = panelsEl.querySelector('.panel-card[data-pid="'+panel.id+'"]');
+      if (!card) return;
+      panel.damages.forEach(function(d){
+        var row = card.querySelector('.damage-row[data-did="'+d.id+'"]');
+        if (!row) return;
+        var badge = row.querySelector(".area-badge");
+        var area = computeDamageArea(d);
+        badge.innerHTML = gridSwatch(area) + fmt(area,2) + " dm²";
+      });
+      var strip = card.querySelector(".result-strip");
+      strip.innerHTML = buildStripHTML(result);
+      var warnSlot = card.querySelector(".warn-slot");
+      warnSlot.innerHTML = buildWarnHTML(result);
+    });
+    document.getElementById("grandTotal").textContent = fmtMoney(grandTotal);
+    document.getElementById("grandIndex").textContent = fmt(grandIndex);
+  }
+
+  function render(){
+    panelsEl.innerHTML = "";
+    var grandTotal = 0, grandIndex = 0;
+
+    panels.forEach(function(panel, pIdx){
+      var result = computePanel(panel);
+      grandTotal += result.cost || 0;
+      grandIndex += result.index || 0;
+
+      var card = document.createElement("div");
+      card.className = "panel-card";
+      card.setAttribute("data-pid", panel.id);
+
+      // head
+      var head = document.createElement("div");
+      head.className = "panel-head";
+      head.innerHTML =
+        '<span class="idx-num">'+String(pIdx+1).padStart(2,"0")+'</span>' +
+        '<input type="text" class="panel-name" value="'+escapeAttr(panel.name)+'">' +
+        '<button class="btn-icon panel-remove" title="刪除此部位">✕</button>';
+      head.querySelector(".panel-name").addEventListener("input", function(e){
+        panel.name = e.target.value; // no full re-render needed, but keep state
+        updateHotspotStates();
+      });
+      head.querySelector(".panel-remove").addEventListener("click", function(){ removePanel(panel.id); });
+      card.appendChild(head);
+
+      // damages
+      var dmgWrap = document.createElement("div");
+      dmgWrap.className = "damages";
+
+      panel.damages.forEach(function(d, dIdx){
+        dmgWrap.appendChild(renderDamageRow(panel, d, dIdx));
+      });
+
+      var addRow = document.createElement("div");
+      addRow.className = "damage-add";
+      addRow.innerHTML = '<button class="btn-ghost">＋ 新增損傷點</button>';
+      addRow.querySelector("button").addEventListener("click", function(){
+        panel.damages.push(newDamage());
+        render();
+      });
+      dmgWrap.appendChild(addRow);
+
+      card.appendChild(dmgWrap);
+
+      // result strip
+      var strip = document.createElement("div");
+      strip.className = "result-strip";
+      strip.innerHTML = buildStripHTML(result);
+      card.appendChild(strip);
+
+      var warnSlot = document.createElement("div");
+      warnSlot.className = "warn-slot";
+      warnSlot.innerHTML = buildWarnHTML(result);
+      card.appendChild(warnSlot);
+
+      panelsEl.appendChild(card);
+    });
+
+    document.getElementById("grandTotal").textContent = fmtMoney(grandTotal);
+    document.getElementById("grandIndex").textContent = fmt(grandIndex);
+  }
+
+  function renderDamageRow(panel, d, dIdx){
+    var row = document.createElement("div");
+    row.className = "damage-row";
+    row.setAttribute("data-did", d.id);
+
+    // shape + dims column
+    var left = document.createElement("div");
+    var shapeSel = document.createElement("select");
+    Object.keys(SHAPES).forEach(function(key){
+      var opt = document.createElement("option");
+      opt.value = key; opt.textContent = SHAPES[key].label;
+      if (key===d.shape) opt.selected = true;
+      shapeSel.appendChild(opt);
+    });
+    shapeSel.addEventListener("change", function(e){
+      d.shape = e.target.value;
+      d.dims = {};
+      SHAPES[d.shape].fields.forEach(function(f){ d.dims[f[0]] = 10; });
+      render();
+    });
+    left.appendChild(shapeSel);
+
+    var area = computeDamageArea(d);
+    var badge = document.createElement("div");
+    badge.className = "area-badge";
+    badge.innerHTML = gridSwatch(area) + fmt(area,2) + " dm²";
+    left.appendChild(badge);
+
+    row.appendChild(left);
+
+    // middle: dims + questions
+    var mid = document.createElement("div");
+
+    var dimWrap = document.createElement("div");
+    dimWrap.className = "dim-fields";
+    SHAPES[d.shape].fields.forEach(function(f){
+      var fld = document.createElement("div");
+      fld.className = "fld";
+      var lab = document.createElement("label");
+      lab.textContent = f[1]+" (cm)";
+      var inp = document.createElement("input");
+      inp.type = "number"; inp.min = "0"; inp.step = "0.5";
+      inp.value = d.dims[f[0]] !== undefined ? d.dims[f[0]] : "";
+      inp.addEventListener("input", function(e){
+        d.dims[f[0]] = parseFloat(e.target.value);
+        recalc();
+      });
+      fld.appendChild(lab); fld.appendChild(inp);
+      dimWrap.appendChild(fld);
+    });
+    mid.appendChild(dimWrap);
+
+    var qWrap = document.createElement("div");
+    qWrap.className = "questions";
+    QUESTIONS.forEach(function(q){
+      var qDiv = document.createElement("div");
+      qDiv.className = "q";
+      var qtext = document.createElement("div");
+      qtext.className = "qtext";
+      qtext.innerHTML = q.text + (q.foot ? '<div class="foot">'+q.foot+'</div>' : "");
+      var toggle = document.createElement("div");
+      toggle.className = "toggle";
+      var yesBtn = document.createElement("button");
+      yesBtn.className = "on-yes" + (d[q.key]===true?" active":"");
+      yesBtn.textContent = "是";
+      yesBtn.addEventListener("click", function(){ d[q.key]=true; render(); });
+      var noBtn = document.createElement("button");
+      noBtn.className = "on-no" + (d[q.key]===false?" active":"");
+      noBtn.textContent = "否";
+      noBtn.addEventListener("click", function(){ d[q.key]=false; render(); });
+      toggle.appendChild(yesBtn); toggle.appendChild(noBtn);
+      qDiv.appendChild(qtext); qDiv.appendChild(toggle);
+      qWrap.appendChild(qDiv);
+    });
+    mid.appendChild(qWrap);
+
+    row.appendChild(mid);
+
+    // right: remove damage
+    var right = document.createElement("div");
+    if (panel.damages.length>1){
+      var rm = document.createElement("button");
+      rm.className = "btn-icon";
+      rm.title = "刪除此損傷點";
+      rm.textContent = "✕";
+      rm.addEventListener("click", function(){
+        panel.damages = panel.damages.filter(function(x){return x.id!==d.id;});
+        render();
+      });
+      right.appendChild(rm);
+    }
+    row.appendChild(right);
+
+    return row;
+  }
+
+  function escapeAttr(s){
+    return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+  }
+
+  function renderRefTable(){
+    var html = "<tr><th>面積 (dm²) ＼ 等級</th><th>A</th><th>B</th><th>C</th></tr>";
+    TABLE.forEach(function(r){
+      html += "<tr><td>"+r.label+"</td><td>"+fmt(r.A)+"</td><td>"+fmt(r.B)+"</td><td>"+fmt(r.C)+"</td></tr>";
+    });
+    document.getElementById("refTable").innerHTML = html;
+  }
+
+  function safeGetRate(){
+    try { return localStorage.getItem("obm_rate"); } catch(e){ return null; }
+  }
+  function safeSetRate(v){
+    try { localStorage.setItem("obm_rate", v); } catch(e){ /* storage unavailable (private mode / file://) — ignore */ }
+  }
+
+  var currentLR = "R";
+
+  function effectiveLabel(el){
+    var base = el.getAttribute("data-base");
+    var lr = el.getAttribute("data-lr");
+    if (lr === "toggle") lr = currentLR;
+    return lr ? base + "（" + lr + "）" : base;
+  }
+
+  function scrollToPanel(pid){
+    var card = panelsEl.querySelector('.panel-card[data-pid="'+pid+'"]');
+    if (!card) return;
+    card.scrollIntoView({behavior:"smooth", block:"center"});
+    card.classList.add("flash-highlight");
+    setTimeout(function(){ card.classList.remove("flash-highlight"); }, 900);
+  }
+
+  function pickPart(el){
+    var label = effectiveLabel(el);
+    var existing = panels.find(function(p){ return p.name === label; });
+    if (existing){ scrollToPanel(existing.id); return; }
+    panelSeq++;
+    panels.push({id:"p"+panelSeq, name:label, damages:[newDamage()]});
+    render();
+    updateHotspotStates();
+    scrollToPanel("p"+panelSeq);
+  }
+
+  function updateHotspotStates(){
+    document.querySelectorAll(".hotspot").forEach(function(el){
+      var label = effectiveLabel(el);
+      var used = panels.some(function(p){ return p.name === label; });
+      el.classList.toggle("used", used);
+    });
+  }
+
+  function setLR(v){
+    currentLR = v;
+    document.getElementById("lrL").classList.toggle("active", v==="L");
+    document.getElementById("lrR").classList.toggle("active", v==="R");
+    var badge = document.getElementById("lrBadge");
+    if (badge) badge.textContent = "目前標記：" + (v==="L" ? "左側 L" : "右側 R");
+    updateHotspotStates();
+  }
+
+  document.getElementById("lrL").addEventListener("click", function(){ setLR("L"); });
+  document.getElementById("lrR").addEventListener("click", function(){ setLR("R"); });
+  document.querySelectorAll(".hotspot").forEach(function(el){
+    el.addEventListener("click", function(){ pickPart(el); });
+  });
+
+  document.getElementById("addPanelBtn").addEventListener("click", addPanel);
+  document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
+  rateInput.addEventListener("input", function(){
+    safeSetRate(rateInput.value);
+    recalc();
+  });
+
+  // restore rate
+  var savedRate = safeGetRate();
+  if (savedRate) rateInput.value = savedRate;
+
+  renderRefTable();
+  addPanel(); // start with one panel
+  setLR("R");
+})();
+</script>
+
+</body>
+</html>
