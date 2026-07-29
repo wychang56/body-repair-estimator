@@ -29,6 +29,7 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
 
+  html{overflow-x:hidden;}
   body{
     font-family:var(--font-display);
     background:
@@ -39,6 +40,8 @@
     color:var(--paper);
     min-height:100vh;
     padding:0 0 80px;
+    overflow-x:hidden;
+    max-width:100vw;
   }
 
   a{color:inherit;}
@@ -94,7 +97,9 @@
     display:grid;
     grid-template-columns:1fr;
     gap:28px;
+    min-width:0;
   }
+  main > *{min-width:0;}
 
   .rate-bar{
     display:flex;
@@ -190,6 +195,78 @@
   .panel-card.flash-highlight{
     box-shadow:0 0 0 3px var(--safety-orange), 0 12px 30px rgba(0,0,0,0.28);
   }
+
+  /* ---------- Summary rows (list view) ---------- */
+  .summary-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    background:var(--paper);
+    color:var(--ink-navy);
+    border-radius:12px;
+    padding:14px 18px;
+    cursor:pointer;
+    box-shadow:0 6px 18px rgba(0,0,0,0.22);
+    transition:transform .1s ease;
+    min-width:0;
+  }
+  .summary-row:active{transform:scale(0.99);}
+  .summary-row .sr-idx{
+    font-family:var(--font-mono); font-size:12px; color:var(--steel-dark); font-weight:700; flex-shrink:0;
+  }
+  .summary-row .sr-name{
+    font-weight:700; font-size:15px; flex:1; min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .summary-row .sr-meta{
+    display:flex; align-items:center; gap:10px;
+    font-family:var(--font-mono); font-size:12px; color:var(--steel-dark);
+    flex-shrink:0;
+  }
+  .summary-row .sr-cost{
+    font-family:var(--font-mono); font-weight:700; color:var(--safety-orange); font-size:16px;
+    white-space:nowrap; flex-shrink:0;
+  }
+  .summary-row .sr-del{flex-shrink:0;}
+  .summary-empty{
+    text-align:center; padding:30px 10px; color:var(--steel-dark);
+    font-size:13px; border:1px dashed var(--blueprint-line); border-radius:12px;
+  }
+
+  /* ---------- Modal editor ---------- */
+  .modal-overlay{
+    position:fixed; inset:0;
+    background:rgba(5,18,33,0.78);
+    z-index:200;
+    display:none;
+    align-items:flex-start;
+    justify-content:center;
+    padding:18px 14px 40px;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    width:100%;
+    max-width:560px;
+    min-width:0;
+    margin-top:6px;
+  }
+  .modal-topbar{
+    display:flex; align-items:center; gap:12px;
+    margin-bottom:12px;
+    position:sticky; top:0;
+  }
+  .modal-back-btn{
+    background:var(--safety-orange); color:#fff;
+    padding:10px 18px; font-size:14px; font-weight:700;
+    display:flex; align-items:center; gap:6px;
+    flex:1;
+    justify-content:center;
+  }
+  .modal-topbar-hint{
+    font-family:var(--font-mono); font-size:11px; color:var(--steel);
+  }
   .panel-head{
     display:flex;
     align-items:center;
@@ -222,7 +299,9 @@
     align-items:start;
     padding:16px 0;
     border-bottom:1px solid rgba(11,36,64,0.08);
+    min-width:0;
   }
+  .damage-row > div{min-width:0;}
   .damage-row:last-child{border-bottom:none;}
 
   .dim-fields{display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
@@ -505,7 +584,9 @@
 
   @media print{
     body{background:#fff; color:#000;}
-    header .corner-tag, .rate-bar, .damage-add, .panel-remove, .add-panel-row, .totals .t-actions, details.reference, .toggle, .picker{display:none !important;}
+    header .corner-tag, .rate-bar, .damage-add, .panel-remove, .add-panel-row, .totals .t-actions, details.reference, .toggle, .picker, .modal-overlay{display:none !important;}
+    #panels{display:none !important;}
+    #printPanels{display:block !important;}
     .panel-card{box-shadow:none; border:1px solid #999; break-inside:avoid;}
     .result-strip{background:#fff; color:#000; border-top:1px solid #999;}
     .result-strip .val, .totals .t-value{color:#000 !important;}
@@ -606,6 +687,7 @@
   </div>
 
   <div id="panels"></div>
+  <div id="printPanels" style="display:none;"></div>
 
   <div class="add-panel-row">
     <button class="btn-primary" id="addPanelBtn">＋ 新增車體部位（自訂名稱）</button>
@@ -636,6 +718,15 @@
   </details>
 
 </main>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <div class="modal-topbar">
+      <button class="modal-back-btn" id="modalDoneBtn">✓ 完成，返回清單</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
 
 <footer>
   DATA SOURCE — Oddic 汽車板金工時估價電腦化系統／外板板金修正指數表　·　本工具僅重現該指數表之計算邏輯，供估價參考，不涉零件與骨體作業工時
@@ -686,27 +777,71 @@
 
   var panelSeq = 0, damageSeq = 0;
   var panels = []; // {id, name, damages:[{id, shape, dims:{}, q1,q2,q3}]}
+  var activePanelId = null;
 
   var panelsEl = document.getElementById("panels");
+  var printPanelsEl = document.getElementById("printPanels");
   var rateInput = document.getElementById("rateInput");
+  var modalOverlay = document.getElementById("modalOverlay");
+  var modalBody = document.getElementById("modalBody");
 
   function newDamage(){
     damageSeq++;
     return {id:"d"+damageSeq, shape:"rect", dims:{a:10,b:10}, q1:null, q2:null, q3:null};
   }
 
-  function addPanel(){
+  function addPanel(openIt){
     panelSeq++;
-    panels.push({id:"p"+panelSeq, name:"部位 "+panelSeq, damages:[newDamage()]});
-    render();
+    var pid = "p"+panelSeq;
+    panels.push({id:pid, name:"部位 "+panelSeq, damages:[newDamage()]});
+    renderAll();
     updateHotspotStates();
+    if (openIt !== false) openModal(pid);
   }
 
   function removePanel(pid){
     panels = panels.filter(function(p){return p.id!==pid;});
-    render();
+    if (activePanelId === pid) closeModal();
+    renderAll();
     updateHotspotStates();
   }
+
+  function openModal(pid){
+    activePanelId = pid;
+    renderModalContent();
+    modalOverlay.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeModal(){
+    activePanelId = null;
+    modalOverlay.classList.remove("open");
+    document.body.style.overflow = "";
+    renderSummary();
+  }
+
+  function renderModalContent(){
+    var panel = panels.find(function(p){ return p.id===activePanelId; });
+    modalBody.innerHTML = "";
+    if (!panel) { closeModal(); return; }
+    var idx = panels.indexOf(panel);
+    modalBody.appendChild(buildPanelCard(panel, idx));
+  }
+
+  document.getElementById("modalDoneBtn").addEventListener("click", closeModal);
+  modalOverlay.addEventListener("click", function(e){
+    if (e.target === modalOverlay) closeModal();
+  });
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape" && modalOverlay.classList.contains("open")) closeModal();
+  });
+
+  window.addEventListener("beforeprint", function(){
+    printPanelsEl.innerHTML = "";
+    panels.forEach(function(panel, idx){
+      printPanelsEl.appendChild(buildPanelCard(panel, idx));
+    });
+  });
 
   function computeDamageArea(d){
     var shape = SHAPES[d.shape];
@@ -777,92 +912,125 @@
     return "";
   }
 
-  function recalc(){
+  function recalcAll(){
     var grandTotal = 0, grandIndex = 0;
     panels.forEach(function(panel){
       var result = computePanel(panel);
       grandTotal += result.cost || 0;
       grandIndex += result.index || 0;
-      var card = panelsEl.querySelector('.panel-card[data-pid="'+panel.id+'"]');
-      if (!card) return;
-      panel.damages.forEach(function(d){
-        var row = card.querySelector('.damage-row[data-did="'+d.id+'"]');
-        if (!row) return;
-        var badge = row.querySelector(".area-badge");
-        var area = computeDamageArea(d);
-        badge.innerHTML = gridSwatch(area) + fmt(area,2) + " dm²";
-      });
-      var strip = card.querySelector(".result-strip");
-      strip.innerHTML = buildStripHTML(result);
-      var warnSlot = card.querySelector(".warn-slot");
-      warnSlot.innerHTML = buildWarnHTML(result);
+
+      var row = panelsEl.querySelector('.summary-row[data-pid="'+panel.id+'"]');
+      if (row) row.innerHTML = buildSummaryRowInnerHTML(panel, result);
+
+      if (activePanelId === panel.id){
+        var card = modalBody.querySelector('.panel-card[data-pid="'+panel.id+'"]');
+        if (card){
+          panel.damages.forEach(function(d){
+            var dRow = card.querySelector('.damage-row[data-did="'+d.id+'"]');
+            if (!dRow) return;
+            var badge = dRow.querySelector(".area-badge");
+            var area = computeDamageArea(d);
+            badge.innerHTML = gridSwatch(area) + fmt(area,2) + " dm²";
+          });
+          var strip = card.querySelector(".result-strip");
+          strip.innerHTML = buildStripHTML(result);
+          var warnSlot = card.querySelector(".warn-slot");
+          warnSlot.innerHTML = buildWarnHTML(result);
+        }
+      }
     });
     document.getElementById("grandTotal").textContent = fmtMoney(grandTotal);
     document.getElementById("grandIndex").textContent = fmt(grandIndex);
   }
 
-  function render(){
+  function buildSummaryRowInnerHTML(panel, result){
+    var gradeHtml = result.grade ? '<span class="grade-pill grade-'+result.grade+'">'+result.grade+'</span>' : '<span class="grade-pill" style="background:#5A7488;">?</span>';
+    return '<span class="sr-idx">'+String(panels.indexOf(panel)+1).padStart(2,"0")+'</span>' +
+      '<span class="sr-name">'+escapeAttr(panel.name)+'</span>' +
+      '<span class="sr-meta">'+gradeHtml+'<span>'+(result.index!==null?fmt(result.index):"—")+'</span></span>' +
+      '<span class="sr-cost">NT$ '+(result.cost!==null?fmtMoney(result.cost):"—")+'</span>' +
+      '<button class="btn-icon sr-del" title="刪除此部位">✕</button>';
+  }
+
+  function renderSummary(){
     panelsEl.innerHTML = "";
     var grandTotal = 0, grandIndex = 0;
 
-    panels.forEach(function(panel, pIdx){
+    if (panels.length===0){
+      panelsEl.innerHTML = '<div class="summary-empty">上面點選部位，或按下方按鈕手動新增</div>';
+    }
+
+    panels.forEach(function(panel){
       var result = computePanel(panel);
       grandTotal += result.cost || 0;
       grandIndex += result.index || 0;
 
-      var card = document.createElement("div");
-      card.className = "panel-card";
-      card.setAttribute("data-pid", panel.id);
-
-      // head
-      var head = document.createElement("div");
-      head.className = "panel-head";
-      head.innerHTML =
-        '<span class="idx-num">'+String(pIdx+1).padStart(2,"0")+'</span>' +
-        '<input type="text" class="panel-name" value="'+escapeAttr(panel.name)+'">' +
-        '<button class="btn-icon panel-remove" title="刪除此部位">✕</button>';
-      head.querySelector(".panel-name").addEventListener("input", function(e){
-        panel.name = e.target.value; // no full re-render needed, but keep state
-        updateHotspotStates();
+      var row = document.createElement("div");
+      row.className = "summary-row";
+      row.setAttribute("data-pid", panel.id);
+      row.innerHTML = buildSummaryRowInnerHTML(panel, result);
+      row.addEventListener("click", function(e){
+        if (e.target.closest(".sr-del")) { removePanel(panel.id); return; }
+        openModal(panel.id);
       });
-      head.querySelector(".panel-remove").addEventListener("click", function(){ removePanel(panel.id); });
-      card.appendChild(head);
-
-      // damages
-      var dmgWrap = document.createElement("div");
-      dmgWrap.className = "damages";
-
-      panel.damages.forEach(function(d, dIdx){
-        dmgWrap.appendChild(renderDamageRow(panel, d, dIdx));
-      });
-
-      var addRow = document.createElement("div");
-      addRow.className = "damage-add";
-      addRow.innerHTML = '<button class="btn-ghost">＋ 新增損傷點</button>';
-      addRow.querySelector("button").addEventListener("click", function(){
-        panel.damages.push(newDamage());
-        render();
-      });
-      dmgWrap.appendChild(addRow);
-
-      card.appendChild(dmgWrap);
-
-      // result strip
-      var strip = document.createElement("div");
-      strip.className = "result-strip";
-      strip.innerHTML = buildStripHTML(result);
-      card.appendChild(strip);
-
-      var warnSlot = document.createElement("div");
-      warnSlot.className = "warn-slot";
-      warnSlot.innerHTML = buildWarnHTML(result);
-      card.appendChild(warnSlot);
-
-      panelsEl.appendChild(card);
+      panelsEl.appendChild(row);
     });
 
     document.getElementById("grandTotal").textContent = fmtMoney(grandTotal);
     document.getElementById("grandIndex").textContent = fmt(grandIndex);
+  }
+
+  function renderAll(){
+    renderSummary();
+    if (activePanelId) renderModalContent();
+  }
+
+  function buildPanelCard(panel, pIdx){
+    var result = computePanel(panel);
+    var card = document.createElement("div");
+    card.className = "panel-card";
+    card.setAttribute("data-pid", panel.id);
+
+    var head = document.createElement("div");
+    head.className = "panel-head";
+    head.innerHTML =
+      '<span class="idx-num">'+String(pIdx+1).padStart(2,"0")+'</span>' +
+      '<input type="text" class="panel-name" value="'+escapeAttr(panel.name)+'">' +
+      '<button class="btn-icon panel-remove" title="刪除此部位">✕</button>';
+    head.querySelector(".panel-name").addEventListener("input", function(e){
+      panel.name = e.target.value;
+      updateHotspotStates();
+    });
+    head.querySelector(".panel-remove").addEventListener("click", function(){ removePanel(panel.id); });
+    card.appendChild(head);
+
+    var dmgWrap = document.createElement("div");
+    dmgWrap.className = "damages";
+    panel.damages.forEach(function(d, dIdx){
+      dmgWrap.appendChild(renderDamageRow(panel, d, dIdx));
+    });
+
+    var addRow = document.createElement("div");
+    addRow.className = "damage-add";
+    addRow.innerHTML = '<button class="btn-ghost">＋ 新增損傷點</button>';
+    addRow.querySelector("button").addEventListener("click", function(){
+      panel.damages.push(newDamage());
+      renderAll();
+    });
+    dmgWrap.appendChild(addRow);
+    card.appendChild(dmgWrap);
+
+    var strip = document.createElement("div");
+    strip.className = "result-strip";
+    strip.innerHTML = buildStripHTML(result);
+    card.appendChild(strip);
+
+    var warnSlot = document.createElement("div");
+    warnSlot.className = "warn-slot";
+    warnSlot.innerHTML = buildWarnHTML(result);
+    card.appendChild(warnSlot);
+
+    return card;
   }
 
   function renderDamageRow(panel, d, dIdx){
@@ -883,7 +1051,7 @@
       d.shape = e.target.value;
       d.dims = {};
       SHAPES[d.shape].fields.forEach(function(f){ d.dims[f[0]] = 10; });
-      render();
+      renderAll();
     });
     left.appendChild(shapeSel);
 
@@ -910,7 +1078,7 @@
       inp.value = d.dims[f[0]] !== undefined ? d.dims[f[0]] : "";
       inp.addEventListener("input", function(e){
         d.dims[f[0]] = parseFloat(e.target.value);
-        recalc();
+        recalcAll();
       });
       fld.appendChild(lab); fld.appendChild(inp);
       dimWrap.appendChild(fld);
@@ -930,11 +1098,11 @@
       var yesBtn = document.createElement("button");
       yesBtn.className = "on-yes" + (d[q.key]===true?" active":"");
       yesBtn.textContent = "是";
-      yesBtn.addEventListener("click", function(){ d[q.key]=true; render(); });
+      yesBtn.addEventListener("click", function(){ d[q.key]=true; renderAll(); });
       var noBtn = document.createElement("button");
       noBtn.className = "on-no" + (d[q.key]===false?" active":"");
       noBtn.textContent = "否";
-      noBtn.addEventListener("click", function(){ d[q.key]=false; render(); });
+      noBtn.addEventListener("click", function(){ d[q.key]=false; renderAll(); });
       toggle.appendChild(yesBtn); toggle.appendChild(noBtn);
       qDiv.appendChild(qtext); qDiv.appendChild(toggle);
       qWrap.appendChild(qDiv);
@@ -952,7 +1120,7 @@
       rm.textContent = "✕";
       rm.addEventListener("click", function(){
         panel.damages = panel.damages.filter(function(x){return x.id!==d.id;});
-        render();
+        renderAll();
       });
       right.appendChild(rm);
     }
@@ -989,23 +1157,16 @@
     return lr ? base + "（" + lr + "）" : base;
   }
 
-  function scrollToPanel(pid){
-    var card = panelsEl.querySelector('.panel-card[data-pid="'+pid+'"]');
-    if (!card) return;
-    card.scrollIntoView({behavior:"smooth", block:"center"});
-    card.classList.add("flash-highlight");
-    setTimeout(function(){ card.classList.remove("flash-highlight"); }, 900);
-  }
-
   function pickPart(el){
     var label = effectiveLabel(el);
     var existing = panels.find(function(p){ return p.name === label; });
-    if (existing){ scrollToPanel(existing.id); return; }
+    if (existing){ openModal(existing.id); return; }
     panelSeq++;
-    panels.push({id:"p"+panelSeq, name:label, damages:[newDamage()]});
-    render();
+    var pid = "p"+panelSeq;
+    panels.push({id:pid, name:label, damages:[newDamage()]});
+    renderAll();
     updateHotspotStates();
-    scrollToPanel("p"+panelSeq);
+    openModal(pid);
   }
 
   function updateHotspotStates(){
@@ -1035,7 +1196,7 @@
   document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
   rateInput.addEventListener("input", function(){
     safeSetRate(rateInput.value);
-    recalc();
+    recalcAll();
   });
 
   // restore rate
@@ -1043,7 +1204,7 @@
   if (savedRate) rateInput.value = savedRate;
 
   renderRefTable();
-  addPanel(); // start with one panel
+  addPanel(false); // start with one panel, don't auto-open modal
   setLR("R");
 })();
 </script>
