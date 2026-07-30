@@ -701,16 +701,10 @@
     </div>
 
     <p class="picker-hint">點一下部位即可自動新增到下方清單並帶入名稱；同一部位重複點擊會直接定位到已建立的卡片，不會重複新增。標了左／右的部位由上方切換鈕決定。圖片直接取自你提供的原圖，點擊區域是我依標號位置估算疊上去的，若跟實際板件邊界有落差，跟我說要往哪個方向調整。</p>
-
-    <div class="picker-divider">或手動輸入</div>
   </div>
 
   <div id="panels"></div>
   <div id="printPanels" style="display:none;"></div>
-
-  <div class="add-panel-row">
-    <button class="btn-primary" id="addPanelBtn">＋ 新增車體部位（自訂名稱）</button>
-  </div>
 
   <div class="totals">
     <div>
@@ -1240,7 +1234,6 @@
     el.addEventListener("click", function(){ pickPart(el); });
   });
 
-  document.getElementById("addPanelBtn").addEventListener("click", addPanel);
   document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
   rateInput.addEventListener("input", function(){
     safeSetRate(rateInput.value);
@@ -1252,7 +1245,7 @@
   if (savedRate) rateInput.value = savedRate;
 
   renderRefTable();
-  addPanel(false); // start with one panel, don't auto-open modal
+  renderSummary(); // start with empty list — parts are only added via the diagram picker
   setLR("R");
 })();
 </script>
