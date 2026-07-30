@@ -376,6 +376,15 @@
     font-size:11px; line-height:1; padding:0;
     display:flex; align-items:center; justify-content:center;
   }
+  .photo-download{
+    display:block;
+    margin-top:5px;
+    font-size:11px;
+    font-weight:700;
+    color:var(--steel-dark);
+    text-decoration:none;
+  }
+  .photo-download:hover{color:var(--safety-orange-dim); text-decoration:underline;}
 
   .damage-add{
     padding:10px 0 16px;
@@ -1085,6 +1094,13 @@
         renderAll();
       });
       photoWrap.appendChild(thumb);
+
+      var dlLink = document.createElement("a");
+      dlLink.className = "photo-download";
+      dlLink.href = d.photo;
+      dlLink.download = safeFileName(panel.name) + "_" + d.id + ".jpg";
+      dlLink.textContent = "⬇ 存到相簿";
+      photoWrap.appendChild(dlLink);
     } else {
       var photoBtn = document.createElement("label");
       photoBtn.className = "photo-btn";
@@ -1173,6 +1189,11 @@
 
   function escapeAttr(s){
     return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+  }
+
+  function safeFileName(s){
+    var cleaned = String(s||"").replace(/[\\/:*?"<>|]/g,"").trim();
+    return cleaned || "損傷";
   }
 
   function renderRefTable(){
