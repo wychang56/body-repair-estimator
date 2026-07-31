@@ -512,20 +512,22 @@
   .hotspot:hover{background:rgba(232,84,30,0.30); border-color:rgba(232,84,30,0.9);}
   .hotspot.used{background:rgba(63,167,150,0.32); border-color:rgba(63,167,150,0.9);}
 
-  .lr-badge{
+  .lr-cover{
     position:absolute;
-    top:8px; left:8px;
+    left:5.8%; top:0%; width:29.3%; height:15.7%;
     z-index:5;
-    background:var(--safety-orange);
-    color:#fff;
+    background:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+  }
+  .lr-cover span{
     font-family:var(--font-mono);
     font-weight:700;
-    font-size:12px;
-    letter-spacing:0.05em;
-    padding:4px 10px;
-    border-radius:6px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.35);
-    pointer-events:none;
+    font-size:clamp(11px, 3.2vw, 16px);
+    color:var(--ink-navy);
+    white-space:nowrap;
   }
 
   .picker-hint{
@@ -649,8 +651,8 @@
     <div class="picker-head">
       <span class="picker-title">點選受損部位</span>
       <div class="lr-toggle">
-        <button id="lrL" data-lr="L">車身左側 (L)</button>
-        <button id="lrR" data-lr="R" class="active">車身右側 (R)</button>
+        <button id="lrL" data-lr="L">左側 (L)</button>
+        <button id="lrR" data-lr="R" class="active">右側 (R)</button>
       </div>
     </div>
 
@@ -659,7 +661,7 @@
       <div class="diagram-box">
         <div class="diagram-frame">
           <img src="assets/side.png" alt="車身側視圖">
-          <div class="lr-badge" id="lrBadge">目前標記：右側 R</div>
+          <div class="lr-cover" id="lrCover"><span id="lrCoverText">右側(R)</span></div>
           <div class="hotspot" data-base="前葉子板" data-lr="toggle" style="left:0%;   top:37.8%; width:26.7%; height:40.6%;"></div>
           <div class="hotspot" data-base="A柱"     data-lr=""       style="left:34.4%; top:20.7%; width:14.4%; height:17.1%;"></div>
           <div class="hotspot" data-base="前車門"   data-lr="toggle" style="left:26.7%; top:37.8%; width:24.4%; height:33.6%;"></div>
@@ -1244,8 +1246,8 @@
     currentLR = v;
     document.getElementById("lrL").classList.toggle("active", v==="L");
     document.getElementById("lrR").classList.toggle("active", v==="R");
-    var badge = document.getElementById("lrBadge");
-    if (badge) badge.textContent = "目前標記：" + (v==="L" ? "左側 L" : "右側 R");
+    var coverText = document.getElementById("lrCoverText");
+    if (coverText) coverText.textContent = v==="L" ? "左側(L)" : "右側(R)";
     updateHotspotStates();
   }
 
